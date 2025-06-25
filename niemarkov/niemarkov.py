@@ -130,8 +130,15 @@ class MarkovChain:
                 self.transitions[from_tup] = {to_tup: 1}
 
     # generate a random path in this `MarkovChain`
-    def generate_path(self, max_len=float('inf')):
-        curr_state_tuple = random_choice(self.initial_state_tuple)
+    def generate_path(self, max_len=float('inf'), start=None):
+        if start is None:
+            curr_state_tuple = random_choice(self.initial_state_tuple)
+        elif len(start) == self.order:
+            curr_state_tuple = tuple(self.label_to_state[label] for label in start)
+            if curr_state_tuple not in self.transitions:
+                raise ValueError("No outgoing edges from start: %s" % start)
+        else: # in the future, can do something fancy to handle this scenario, e.g. randomly pick an initial state tuple ending with `start`
+            raise ValueError("`start` length (%d) must be same as Markov model order (%d): %s" % (len(start), self.order, start))
         path = [self.labels[state] for state in curr_state_tuple]
         while len(path) < max_len:
             if curr_state_tuple not in self.transitions:
