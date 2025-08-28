@@ -50,6 +50,7 @@ class MarkovChain:
     def __init__(self, order=1):
         if not isinstance(order, int) or order < 1:
             raise ValueError("`order` must be a positive integer")
+        self.version = VERSION            # NieMarkov version number
         self.order = order                # order of this Markov chain
         self.labels = list()              # labels of the states of this Markov chain
         self.label_to_state = dict()      # `label_to_state[label]` is the state (`int` from 0 to `num_states-1`) labeled by `label`
@@ -63,7 +64,7 @@ class MarkovChain:
     # dump this `MarkovChain` to a file (None = stdout)
     def dump(self, fn, buffering=DEFAULT_BUFSIZE):
         fn_lower = fn.strip().lower()
-        model = {'version':VERSION, 'order':self.order, 'labels':self.labels, 'transitions':self.transitions, 'initial': self.initial_state_tuple}
+        model = {'version':self.version, 'order':self.order, 'labels':self.labels, 'transitions':self.transitions, 'initial': self.initial_state_tuple}
         if fn_lower.endswith('.pkl') or fn_lower.endswith('.pkl.gz'):
             with open_file(fn, mode='wb', buffering=buffering) as f:
                 pdump(model, f)
@@ -91,6 +92,7 @@ class MarkovChain:
 
         # create and populate output `MarkovChain`
         mc = MarkovChain(order=model['order'])
+        mc.version = model['version']
         mc.labels = model['labels']
         mc.label_to_state = {label:i for i, label in enumerate(mc.labels)}
         mc.transitions = model['transitions']
