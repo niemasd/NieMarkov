@@ -6,36 +6,62 @@ NieMarkov: Niema's Python implementation of Markov chains
 # imports
 from ast import literal_eval
 from gzip import open as gopen
+from pathlib import Path
 from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-NIEMARKOV_VERSION = '1.0.0'
+NIEMARKOV_VERSION = '1.0.1'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
 
-# helper function to check state type and throw an error if not allowed
 def check_state_type(state_label):
+    '''
+    Helper function to check state type and throw an error if not allowed
+
+    Args:
+        state_label (str): The label of the state to check
+    '''
     if type(state_label) not in ALLOWED_STATE_TYPES:
         raise TypeError("Invalid state type (%s). Must be one of: %s" % (type(state_label), ', '.join(str(t) for t in ALLOWED_STATE_TYPES)))
 
-# open a file for reading/writing (None = stdin/stdout)
-def open_file(fn, mode='rt', buffering=DEFAULT_BUFSIZE):
+def open_file(p, mode='rt', buffering=DEFAULT_BUFSIZE):
+    '''
+    Open a file for reading/writing
+
+    Args:
+        p (Path): The path of the file to open, or `None` for `stdin`/`stdout`
+        mode (str): The mode to open the file stream in
+        buffering (int): The size of the file I/O buffer
+
+    Returns:
+        file: The opened file
+    '''
     mode = mode.strip().lower()
-    if fn is None:
+    if isinstance(p, str):
+        p = Path(p)
+    if p is None:
         if 'r' in mode:
             from sys import stdin as f
         else:
             from sys import stdout as f
-    elif fn.strip().lower().endswith('.gz'):
-        f = gopen(fn, mode=mode)
+    elif p.suffix == '.gz':
+        f = gopen(p, mode=mode)
     else:
-        f = open(fn, mode=mode)
+        f = open(p, mode=mode)
     return f
 
-# helper function to randomly pick from a `dict` of options (keys = options, values = count weighting that option)
 def random_choice(options):
+    '''
+    Helper function to randomly pick from a collection of options
+
+    Args:
+        options (dict): The options to randomly pick from (keys = options, values = count weighting that option)
+
+    Returns:
+        object: A random element from `options`
+    '''
     sum_options = sum(options.values())
     random_int = randint(1, sum_options)
     curr_total_count = 0
@@ -44,10 +70,15 @@ def random_choice(options):
         if random_int <= curr_total_count:
             return option
 
-# class to represent Markov chains
 class MarkovChain:
-    # initialize a `MarkovChain` object
+    '''Class to represent Markov chains'''
     def __init__(self, order=1):
+        '''
+        Initialize a `MarkovChain` object
+
+        Args:
+            order (int): The order of this Markov chain
+        '''
         if not isinstance(order, int) or order < 1:
             raise ValueError("`order` must be a positive integer")
         self.version = NIEMARKOV_VERSION  # NieMarkov version number
@@ -57,38 +88,60 @@ class MarkovChain:
         self.transitions = dict()         # for an `order`-dimensional `tuple` of states `state_tuple`, `transitions[state_tuple]` is a `dict` where keys = outgoing state tuples, and values = transition counts
         self.initial_state_tuple = dict() # `initial_state_tuple[state_tuple]` is the number of times `state_tuple` is at the start of a path
 
-    # return a string summarizing this `MarkovChain`
     def __str__(self):
+        '''
+        Return a string summarizing this `MarkovChain`
+
+        Returns:
+            str: A string summarizing this `MarkovChain`
+        '''
         return '<NieMarkov: order=%d; states=%d>' % (self.order, len(self.labels))
 
-    # dump this `MarkovChain` to a file (None = stdout)
-    def dump(self, fn, buffering=DEFAULT_BUFSIZE):
-        fn_lower = fn.strip().lower()
+    def dump(self, p, buffering=DEFAULT_BUFSIZE):
+        '''
+        Dump this `MarkovChain` to a file
+
+        Args:
+            p (Path): The path of the file where this `MarkovChain` should be dumped
+            buffering (int): The size of the file I/O buffer
+        '''
+        if isinstance(p, str):
+            p = Path(p)
         model = {'version':self.version, 'order':self.order, 'labels':self.labels, 'transitions':self.transitions, 'initial': self.initial_state_tuple}
-        if fn_lower.endswith('.pkl') or fn_lower.endswith('.pkl.gz'):
-            with open_file(fn, mode='wb', buffering=buffering) as f:
+        if p.suffix.lower() == '.pkl' or p.name.lower().endswith('.pkl.gz'):
+            with open_file(p, mode='wb', buffering=buffering) as f:
                 pdump(model, f)
-        elif fn_lower.endswith('.dict') or fn_lower.endswith('.dict.gz'):
-            with open_file(fn, mode='wt', buffering=buffering) as f:
+        elif p.suffix.lower() == '.dict' or p.name.lower().endswith('.dict.gz'):
+            with open_file(p, mode='wt', buffering=buffering) as f:
                 f.write(str(model))
         else:
-            raise ValueError("Invalid output NieMarkov model filename (%s). Valid extensions: %s" % (fn, ', '.join(ext for ext in sorted(MODEL_EXT))))
+            raise ValueError("Invalid output NieMarkov model filename (%s). Valid extensions: %s" % (p, ', '.join(ext for ext in sorted(MODEL_EXT))))
 
-    # load a `MarkovChain` from a file (None = stdin)
-    def load(fn, buffering=DEFAULT_BUFSIZE):
+    def load(p, buffering=DEFAULT_BUFSIZE):
+        '''
+        Load a `MarkovChain` from a file
+
+        Args:
+            p (Path): The path of the file from which to load a `MarkovChain`
+            buffering (int): The size of the file I/O buffer
+
+        Returns:
+            MarkovChain: The loaded `MarkovChain`
+        '''
         # load model from file
-        fn_lower = fn.strip().lower()
-        if fn_lower.endswith('.pkl') or fn_lower.endswith('.pkl.gz'):
-            with open_file(fn, mode='rb', buffering=buffering) as f:
+        if isinstance(p, str):
+            p = Path(p)
+        if p.suffix.lower() == '.pkl' or p.name.lower().endswith('.pkl.gz'):
+            with open_file(p, mode='rb', buffering=buffering) as f:
                 model = pload(f)
-        elif fn_lower.endswith('.dict') or fn_lower.endswith('.dict.gz'):
-            with open_file(fn, mode='rt', buffering=buffering) as f:
+        elif p.suffix.lower() == '.dict' or p.name.lower().endswith('.dict.gz'):
+            with open_file(p, mode='rt', buffering=buffering) as f:
                 model = literal_eval(f.read())
 
         # check model for validity
         for k in ['order', 'labels', 'transitions', 'initial']:
             if k not in model:
-                raise ValueError("Invalid model file (missing key '%s'): %s" % (k, fn))
+                raise ValueError("Invalid model file (missing key '%s'): %s" % (k, p))
 
         # create and populate output `MarkovChain`
         mc = MarkovChain(order=model['order'])
@@ -99,8 +152,13 @@ class MarkovChain:
         mc.initial_state_tuple = model['initial']
         return mc
 
-    # add a path to this `MarkovChain`
     def add_path(self, path):
+        '''
+        Add a path to this `MarkovChain`
+
+        Args:
+            path (list): A path of states
+        '''
         # check `path` for validity
         if not isinstance(path, list):
             raise TypeError("`path` must be a list of state labels")
@@ -132,8 +190,17 @@ class MarkovChain:
             else:
                 self.transitions[from_tup] = {to_tup: 1}
 
-    # generate a random path in this `MarkovChain`
     def generate_path(self, max_len=float('inf'), start=None):
+        '''
+        Generate a random path in this `MarkovChain`
+
+        Args:
+            max_len (int): The maximum length of the random path to generate
+            start (str): The starting state, or `None` to randomly pick a starting state
+
+        Returns:
+            list: The randomly-generated path
+        '''
         if start is None:
             curr_state_tuple = random_choice(self.initial_state_tuple)
         elif len(start) == self.order:

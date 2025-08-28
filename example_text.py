@@ -6,7 +6,7 @@ from niemarkov import MarkovChain
 from sys import argv
 if __name__ == "__main__":
     # parse user args
-    assert len(argv) in {2,3} and argv[1].replace('-', '').strip().lower() not in {'h', 'help'}, "USAGE: %s <txt/model> [order=1]"
+    assert len(argv) in {2,3} and argv[1].replace('-', '').strip().lower() not in {'h', 'help'}, "USAGE: %s <txt/model> [order=1]" % argv[0]
     if len(argv) == 3:
         order = int(argv[2])
     else:
