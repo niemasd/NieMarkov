@@ -10,7 +10,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-VERSION = '1.0.0'
+NIEMARKOV_VERSION = '1.0.0'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
@@ -50,7 +50,7 @@ class MarkovChain:
     def __init__(self, order=1):
         if not isinstance(order, int) or order < 1:
             raise ValueError("`order` must be a positive integer")
-        self.version = VERSION            # NieMarkov version number
+        self.version = NIEMARKOV_VERSION  # NieMarkov version number
         self.order = order                # order of this Markov chain
         self.labels = list()              # labels of the states of this Markov chain
         self.label_to_state = dict()      # `label_to_state[label]` is the state (`int` from 0 to `num_states-1`) labeled by `label`
