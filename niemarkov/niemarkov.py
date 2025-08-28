@@ -10,6 +10,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
+VERSION = '1.0.0'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
@@ -62,7 +63,7 @@ class MarkovChain:
     # dump this `MarkovChain` to a file (None = stdout)
     def dump(self, fn, buffering=DEFAULT_BUFSIZE):
         fn_lower = fn.strip().lower()
-        model = {'order':self.order, 'labels':self.labels, 'transitions':self.transitions, 'initial': self.initial_state_tuple}
+        model = {'version':VERSION, 'order':self.order, 'labels':self.labels, 'transitions':self.transitions, 'initial': self.initial_state_tuple}
         if fn_lower.endswith('.pkl') or fn_lower.endswith('.pkl.gz'):
             with open_file(fn, mode='wb', buffering=buffering) as f:
                 pdump(model, f)
