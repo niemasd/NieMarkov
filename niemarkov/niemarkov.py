@@ -11,7 +11,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-NIEMARKOV_VERSION = '1.0.1'
+NIEMARKOV_VERSION = '1.0.2'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
@@ -96,6 +96,36 @@ class MarkovChain:
             str: A string summarizing this `MarkovChain`
         '''
         return '<NieMarkov: order=%d; states=%d>' % (self.order, len(self.labels))
+
+    def __iter__(self):
+        '''
+        Iterate over the state tuples of this `order`-order `MarkovChain`
+
+        Yields:
+            tuple: The next state tuple.
+        '''
+        state_tuples = set()
+        for state_tuple_src, outgoing_dict in self.transitions.items():
+            state_tuples.add(state_tuple_src)
+            for state_tuple_dst in outgoing_dict:
+                state_tuples.add(state_tuple_dst)
+        for state_tuple in state_tuples:
+            yield state_tuple
+
+    def __getitem__(self, key):
+        '''
+        Return the outgoing transitions of a given state tuple
+
+        Args:
+            key (tuple): A state tuple
+
+        Returns:
+            dict: The outgoing transmissions of `key`
+        '''
+        try:
+            return self.transitions[key]
+        except KeyError:
+            return dict()
 
     def dump(self, p, buffering=DEFAULT_BUFSIZE):
         '''
@@ -216,3 +246,17 @@ class MarkovChain:
             curr_state_tuple = random_choice(self.transitions[curr_state_tuple])
             path.append(self.labels[curr_state_tuple[-1]])
         return path
+
+    def to_dot(self):
+        '''
+        Get a representation of this `MarkovChain` in the Graphviz DOT format
+
+        Returns:
+            str: The DOT representation of this `MarkovChain`
+        '''
+        state_tuples = list(self)
+        state_tuple_to_ind = {state_tuple:i for i, state_tuple in enumerate(state_tuples)}
+        state_tuple_labels = [' '.join(self.labels[state] for state in state_tuple) for state_tuple in state_tuples]
+        nodes_str = '\n'.join('    %s [label="%s"];' % (state_tuple, state_tuple_label.strip().replace('"',"'")) for state_tuple, state_tuple_label in enumerate(state_tuple_labels))
+        edges_str = '\n'.join('    %d -> %d [label="%s"];' % (state_tuple_to_ind[state_tuple_src], state_tuple_to_ind[state_tuple_dst], edge_count) for state_tuple_src in state_tuples for state_tuple_dst, edge_count in self[state_tuple_src].items())
+        return 'digraph G {\n    // nodes\n%s\n\n    // edges\n%s\n}\n' % (nodes_str, edges_str)
