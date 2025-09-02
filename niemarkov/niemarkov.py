@@ -11,7 +11,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-NIEMARKOV_VERSION = '1.0.2'
+NIEMARKOV_VERSION = '1.0.3'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
@@ -126,6 +126,19 @@ class MarkovChain:
             return self.transitions[key]
         except KeyError:
             return dict()
+
+    def get_label(self, state_tuple, delim=' '):
+        '''
+        Return the label of an `order`-order state tuple of this `MarkovChain`
+
+        Args:
+            state_tuple (tuple): The state tuple whose label to get
+            delim (str): The delimiter to use to separate individual entities of `state_tuple`
+
+        Returns:
+            str: The label of `state_tuple`
+        '''
+        return delim.join(self.labels[state] for state in state_tuple)
 
     def dump(self, p, buffering=DEFAULT_BUFSIZE):
         '''
@@ -256,7 +269,7 @@ class MarkovChain:
         '''
         state_tuples = list(self)
         state_tuple_to_ind = {state_tuple:i for i, state_tuple in enumerate(state_tuples)}
-        state_tuple_labels = [' '.join(self.labels[state] for state in state_tuple) for state_tuple in state_tuples]
+        state_tuple_labels = [self.get_label(state_tuple) for state_tuple in state_tuples]
         nodes_str = '\n'.join('    %s [label="%s"];' % (state_tuple, state_tuple_label.strip().replace('"',"'")) for state_tuple, state_tuple_label in enumerate(state_tuple_labels))
         edges_str = '\n'.join('    %d -> %d [label="%s"];' % (state_tuple_to_ind[state_tuple_src], state_tuple_to_ind[state_tuple_dst], edge_count) for state_tuple_src in state_tuples for state_tuple_dst, edge_count in self[state_tuple_src].items())
         return 'digraph G {\n    // nodes\n%s\n\n    // edges\n%s\n}\n' % (nodes_str, edges_str)
