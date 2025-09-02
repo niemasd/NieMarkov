@@ -19,8 +19,8 @@ here = path.abspath(path.dirname(__file__))
 setup(
     name='NieMarkov',  # Required
     version=NIEMARKOV_VERSION,  # Required
-    description="NieMarkov: Niema's Python Bloom Filter implementation",  # Required
-    long_description="NieMarkov: Niema's Python Bloom Filter implementation",  # Optional
+    description="NieMarkov: Niema's Python implementation of Markov chains",  # Required
+    long_description="NieMarkov: Niema's Python implementation of Markov chains",  # Optional
     long_description_content_type='text/plain',  # Optional (see note above)
     url='https://github.com/niemasd/NieMarkov',  # Optional
     author='Niema Moshiri',  # Optional
