@@ -11,7 +11,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-NIEMARKOV_VERSION = '1.0.3'
+NIEMARKOV_VERSION = '1.0.4'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
@@ -138,7 +138,7 @@ class MarkovChain:
         Returns:
             str: The label of `state_tuple`
         '''
-        return delim.join(self.labels[state] for state in state_tuple)
+        return delim.join(str(self.labels[state]) for state in state_tuple)
 
     def dump(self, p, buffering=DEFAULT_BUFSIZE):
         '''
