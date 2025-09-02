@@ -273,3 +273,19 @@ class MarkovChain:
         nodes_str = '\n'.join('    %s [label="%s"];' % (state_tuple, state_tuple_label.strip().replace('"',"'")) for state_tuple, state_tuple_label in enumerate(state_tuple_labels))
         edges_str = '\n'.join('    %d -> %d [label="%s"];' % (state_tuple_to_ind[state_tuple_src], state_tuple_to_ind[state_tuple_dst], edge_count) for state_tuple_src in state_tuples for state_tuple_dst, edge_count in self[state_tuple_src].items())
         return 'digraph G {\n    // nodes\n%s\n\n    // edges\n%s\n}\n' % (nodes_str, edges_str)
+
+    def to_cosmograph(self, delim='\t'):
+        '''
+        Get a representation of this `MarkovChain` in the Cosmograph (cosmograph.app) format
+
+        Args:
+            delim (str): The delimiter to use to separate columns
+
+        Returns:
+            str: The Cosmograph representation of this `MarkovChain`
+        '''
+        state_tuples = list(self)
+        state_tuple_labels = [self.get_label(state_tuple).replace(delim,'') for state_tuple in state_tuples]
+        state_tuple_to_ind = {state_tuple:i for i, state_tuple in enumerate(state_tuples)}
+        edges_str = '\n'.join('%s%s%s%s%s' % (state_tuple_labels[state_tuple_to_ind[state_tuple_src]], delim, state_tuple_labels[state_tuple_to_ind[state_tuple_dst]], delim, edge_count) for state_tuple_src in state_tuples for state_tuple_dst, edge_count in self[state_tuple_src].items())
+        return 'source%starget%svalue\n%s\n' % (delim, delim, edges_str)
