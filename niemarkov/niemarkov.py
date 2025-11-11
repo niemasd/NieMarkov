@@ -11,7 +11,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-NIEMARKOV_VERSION = '1.0.4'
+NIEMARKOV_VERSION = '1.0.5'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
@@ -85,8 +85,8 @@ class MarkovChain:
         self.order = order                # order of this Markov chain
         self.labels = list()              # labels of the states of this Markov chain
         self.label_to_state = dict()      # `label_to_state[label]` is the state (`int` from 0 to `num_states-1`) labeled by `label`
-        self.transitions = dict()         # for an `order`-dimensional `tuple` of states `state_tuple`, `transitions[state_tuple]` is a `dict` where keys = outgoing state tuples, and values = transition counts
-        self.initial_state_tuple = dict() # `initial_state_tuple[state_tuple]` is the number of times `state_tuple` is at the start of a path
+        self.transitions = dict()         # for an `order`-dimensional `tuple` of states `node`, `transitions[node]` is a `dict` where keys = outgoing nodes (state `tuple`s), and values = transition counts
+        self.initial_node = dict()        # `initial_node[node]` is the number of times `node` is at the start of a path
 
     def __str__(self):
         '''
@@ -95,29 +95,29 @@ class MarkovChain:
         Returns:
             str: A string summarizing this `MarkovChain`
         '''
-        return '<NieMarkov: order=%d; states=%d>' % (self.order, len(self.labels))
+        return '<NieMarkov v%s: order=%d; states=%d>' % (self.version, self.order, len(self.labels))
 
     def __iter__(self):
         '''
-        Iterate over the state tuples of this `order`-order `MarkovChain`
+        Iterate over the nodes (state `tuple`s) of this `order`-order `MarkovChain`
 
         Yields:
-            tuple: The next state tuple.
+            tuple: The next node (state `tuple`)
         '''
-        state_tuples = set()
-        for state_tuple_src, outgoing_dict in self.transitions.items():
-            state_tuples.add(state_tuple_src)
-            for state_tuple_dst in outgoing_dict:
-                state_tuples.add(state_tuple_dst)
-        for state_tuple in state_tuples:
-            yield state_tuple
+        nodes = set()
+        for node_src, outgoing_dict in self.transitions.items():
+            nodes.add(node_src)
+            for node_dst in outgoing_dict:
+                nodes.add(node_dst)
+        for node in nodes:
+            yield node
 
     def __getitem__(self, key):
         '''
-        Return the outgoing transitions of a given state tuple
+        Return the outgoing transitions of a given node (state `tuple`)
 
         Args:
-            key (tuple): A state tuple
+            key (tuple): A node (state `tuple`)
 
         Returns:
             dict: The outgoing transmissions of `key`
@@ -127,18 +127,21 @@ class MarkovChain:
         except KeyError:
             return dict()
 
-    def get_label(self, state_tuple, delim=' '):
+    def get_label(self, node, delim=' '):
         '''
-        Return the label of an `order`-order state tuple of this `MarkovChain`
+        Return the label of an `order`-order node (state `tuple`) of this `MarkovChain`
 
         Args:
-            state_tuple (tuple): The state tuple whose label to get
-            delim (str): The delimiter to use to separate individual entities of `state_tuple`
+            node (tuple): The node (state `tuple`) whose label to get
+            delim (str): The delimiter to use to separate individual entities of `node`
 
         Returns:
-            str: The label of `state_tuple`
+            str: The label of `node`
         '''
-        return delim.join(str(self.labels[state]) for state in state_tuple)
+        if isinstance(node, tuple):
+            return delim.join(str(self.labels[state]) for state in node)
+        else:
+            return self.labels[node] # if user provides a state instead of a node (state `tuple`)
 
     def dump(self, p, buffering=DEFAULT_BUFSIZE):
         '''
@@ -150,7 +153,7 @@ class MarkovChain:
         '''
         if isinstance(p, str):
             p = Path(p)
-        model = {'version':self.version, 'order':self.order, 'labels':self.labels, 'transitions':self.transitions, 'initial': self.initial_state_tuple}
+        model = {'version':self.version, 'order':self.order, 'labels':self.labels, 'transitions':self.transitions, 'initial': self.initial_node}
         if p.suffix.lower() == '.pkl' or p.name.lower().endswith('.pkl.gz'):
             with open_file(p, mode='wb', buffering=buffering) as f:
                 pdump(model, f)
@@ -192,7 +195,7 @@ class MarkovChain:
         mc.labels = model['labels']
         mc.label_to_state = {label:i for i, label in enumerate(mc.labels)}
         mc.transitions = model['transitions']
-        mc.initial_state_tuple = model['initial']
+        mc.initial_node = model['initial']
         return mc
 
     def add_path(self, path):
@@ -218,10 +221,10 @@ class MarkovChain:
 
         # add path
         first_tup = tuple(self.label_to_state[path[j]] for j in range(self.order))
-        if first_tup in self.initial_state_tuple:
-            self.initial_state_tuple[first_tup] += 1
+        if first_tup in self.initial_node:
+            self.initial_node[first_tup] += 1
         else:
-            self.initial_state_tuple[first_tup] = 1
+            self.initial_node[first_tup] = 1
         for i in range(len(path) - self.order):
             from_tup = tuple(self.label_to_state[path[j]] for j in range(i, i+self.order))
             to_tup = tuple(self.label_to_state[path[j]] for j in range(i+1, i+1+self.order))
@@ -233,31 +236,65 @@ class MarkovChain:
             else:
                 self.transitions[from_tup] = {to_tup: 1}
 
-    def generate_path(self, max_len=float('inf'), start=None):
+    def get_random_start(self):
+        '''
+        Return a random starting node (state `tuple`) in this `MarkovChain`
+
+        Returns:
+            tuple: A random starting node (state `tuple`) in this `MarkovChain`
+        '''
+        return random_choice(self.initial_node)
+
+    def random_walk(self, start=None, include_start=False):
+        '''
+        Iterator that yields nodes (state `tuples`) in this `MarkovChain` according to a random walk
+
+        Args:
+            start (tuple): The starting node (state `tuple`), or `None` to randomly pick a starting node (state `tuple`)
+            include_start (bool): `True` to include `start` as the first yielded node, otherwise `False`
+
+        Yields:
+            tuple: The next node (state `tuple`) in the random walk
+        '''
+        if start is None:
+            curr_node = self.get_random_start()
+        elif len(start) == self.order:
+            curr_node = tuple(self.label_to_state[label] for label in start)
+            if curr_node not in self.transitions:
+                raise ValueError("No outgoing edges from start: %s" % start)
+        else: # in the future, can do something fancy to handle this scenario, e.g. randomly pick an initial node (state `tuple`) ending with `start`
+            raise ValueError("`start` length (%d) must be same as Markov model order (%d): %s" % (len(start), self.order, start))
+        if include_start:
+            yield curr_node
+        while True:
+            if curr_node not in self.transitions:
+                break
+            curr_node = random_choice(self.transitions[curr_node])
+            yield curr_node
+
+    def generate_path(self, start=None, max_len=float('inf')):
         '''
         Generate a random path in this `MarkovChain`
 
         Args:
+            start (tuple): The starting node (state `tuple`), or `None` to randomly pick a starting node (state `tuple`)
             max_len (int): The maximum length of the random path to generate
-            start (str): The starting state, or `None` to randomly pick a starting state
 
         Returns:
             list: The randomly-generated path
         '''
-        if start is None:
-            curr_state_tuple = random_choice(self.initial_state_tuple)
-        elif len(start) == self.order:
-            curr_state_tuple = tuple(self.label_to_state[label] for label in start)
-            if curr_state_tuple not in self.transitions:
-                raise ValueError("No outgoing edges from start: %s" % start)
-        else: # in the future, can do something fancy to handle this scenario, e.g. randomly pick an initial state tuple ending with `start`
-            raise ValueError("`start` length (%d) must be same as Markov model order (%d): %s" % (len(start), self.order, start))
-        path = [self.labels[state] for state in curr_state_tuple]
-        while len(path) < max_len:
-            if curr_state_tuple not in self.transitions:
+        path = None
+        for curr_node in self.random_walk(start=start, include_start=True):
+            if path is None: # first node (state `tuple`), so add all states to path
+                path = [self.labels[state] for state in curr_node]
+            else:
+                if len(path) >= max_len:
+                    break
+                path.append(self.labels[curr_node[-1]])
+            if len(path) >= max_len:
                 break
-            curr_state_tuple = random_choice(self.transitions[curr_state_tuple])
-            path.append(self.labels[curr_state_tuple[-1]])
+        if isinstance(max_len, int):
+            path = path[:max_len]
         return path
 
     def to_dot(self):
@@ -267,11 +304,11 @@ class MarkovChain:
         Returns:
             str: The DOT representation of this `MarkovChain`
         '''
-        state_tuples = list(self)
-        state_tuple_to_ind = {state_tuple:i for i, state_tuple in enumerate(state_tuples)}
-        state_tuple_labels = [self.get_label(state_tuple) for state_tuple in state_tuples]
-        nodes_str = '\n'.join('    %s [label="%s"];' % (state_tuple, state_tuple_label.strip().replace('"',"'")) for state_tuple, state_tuple_label in enumerate(state_tuple_labels))
-        edges_str = '\n'.join('    %d -> %d [label="%s"];' % (state_tuple_to_ind[state_tuple_src], state_tuple_to_ind[state_tuple_dst], edge_count) for state_tuple_src in state_tuples for state_tuple_dst, edge_count in self[state_tuple_src].items())
+        nodes = list(self)
+        node_to_ind = {node:i for i, node in enumerate(nodes)}
+        node_labels = [self.get_label(node) for node in nodes]
+        nodes_str = '\n'.join('    %s [label="%s"];' % (node, node_label.strip().replace('"',"'")) for node, node_label in enumerate(node_labels))
+        edges_str = '\n'.join('    %d -> %d [label="%s"];' % (node_to_ind[node_src], node_to_ind[node_dst], edge_count) for node_src in nodes for node_dst, edge_count in self[node_src].items())
         return 'digraph G {\n    // nodes\n%s\n\n    // edges\n%s\n}\n' % (nodes_str, edges_str)
 
     def to_cosmograph(self, delim='\t'):
@@ -284,8 +321,8 @@ class MarkovChain:
         Returns:
             str: The Cosmograph representation of this `MarkovChain`
         '''
-        state_tuples = list(self)
-        state_tuple_labels = [self.get_label(state_tuple).replace(delim,'') for state_tuple in state_tuples]
-        state_tuple_to_ind = {state_tuple:i for i, state_tuple in enumerate(state_tuples)}
-        edges_str = '\n'.join('%s%s%s%s%s' % (state_tuple_labels[state_tuple_to_ind[state_tuple_src]], delim, state_tuple_labels[state_tuple_to_ind[state_tuple_dst]], delim, edge_count) for state_tuple_src in state_tuples for state_tuple_dst, edge_count in self[state_tuple_src].items())
+        nodes = list(self)
+        node_labels = [self.get_label(node).replace(delim,'') for node in nodes]
+        node_to_ind = {node:i for i, node in enumerate(nodes)}
+        edges_str = '\n'.join('%s%s%s%s%s' % (node_labels[node_to_ind[node_src]], delim, node_labels[node_to_ind[node_dst]], delim, edge_count) for node_src in nodes for node_dst, edge_count in self[node_src].items())
         return 'source%starget%svalue\n%s\n' % (delim, delim, edges_str)
