@@ -17,7 +17,7 @@ with open('niemarkov/niemarkov.py') as f:
 
 here = path.abspath(path.dirname(__file__))
 setup(
-    name='NieMarkov',  # Required
+    name='niemarkov',  # Required
     version=NIEMARKOV_VERSION,  # Required
     description="NieMarkov: Niema's Python implementation of Markov chains",  # Required
     long_description="NieMarkov: Niema's Python implementation of Markov chains",  # Optional
