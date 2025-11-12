@@ -11,7 +11,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-NIEMARKOV_VERSION = '1.0.5'
+NIEMARKOV_VERSION = '1.0.6'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
@@ -198,12 +198,15 @@ class MarkovChain:
         mc.initial_node = model['initial']
         return mc
 
-    def add_path(self, path):
+    def add_path(self, path, increment_amount=1, min_count=0, max_count=float('inf')):
         '''
         Add a path to this `MarkovChain`
 
         Args:
             path (list): A path of states
+            increment_amount (int): The amount to increment each edge weight in `path` (or decrement if `increment_amount` is negative)
+            min_count (int): The minimum possible edge weight (useful for decrementing paths when `increment_amount` is negative)
+            max_count (int): The maximum possible edge weight
         '''
         # check `path` for validity
         if not isinstance(path, list):
@@ -226,15 +229,13 @@ class MarkovChain:
         else:
             self.initial_node[first_tup] = 1
         for i in range(len(path) - self.order):
-            from_tup = tuple(self.label_to_state[path[j]] for j in range(i, i+self.order))
-            to_tup = tuple(self.label_to_state[path[j]] for j in range(i+1, i+1+self.order))
-            if from_tup in self.transitions:
-                if to_tup in self.transitions[from_tup]:
-                    self.transitions[from_tup][to_tup] += 1
-                else:
-                    self.transitions[from_tup][to_tup] = 1
-            else:
-                self.transitions[from_tup] = {to_tup: 1}
+            node_src = tuple(self.label_to_state[path[j]] for j in range(i, i+self.order))
+            node_dst = tuple(self.label_to_state[path[j]] for j in range(i+1, i+1+self.order))
+            if node_src not in self.transitions:
+                self.transitions[node_src] = dict()
+            if node_dst not in self.transitions[node_src]:
+                self.transitions[node_src][node_dst] = 0
+            self.transitions[node_src][node_dst] = min(max_count, max(0, self.transitions[node_src][node_dst] + increment_amount))
 
     def get_random_start(self):
         '''
@@ -245,13 +246,14 @@ class MarkovChain:
         '''
         return random_choice(self.initial_node)
 
-    def random_walk(self, start=None, include_start=False):
+    def random_walk(self, start=None, include_start=False, num_steps=None):
         '''
         Iterator that yields nodes (state `tuples`) in this `MarkovChain` according to a random walk
 
         Args:
             start (tuple): The starting node (state `tuple`), or `None` to randomly pick a starting node (state `tuple`)
             include_start (bool): `True` to include `start` as the first yielded node, otherwise `False`
+            num_steps (int): The number of steps in the random walk, or `None` to walk infinitely
 
         Yields:
             tuple: The next node (state `tuple`) in the random walk
@@ -269,8 +271,20 @@ class MarkovChain:
         while True:
             if curr_node not in self.transitions:
                 break
+            if num_steps is not None:
+                num_steps -= 1
+                if num_steps <= 0:
+                    break
             curr_node = random_choice(self.transitions[curr_node])
             yield curr_node
+
+    def est_stationary_dist(self, start=None, num_steps=1000):
+        '''
+        Estimate the stationary distribution of this `MarkovChain` via random walk
+
+        Args:
+            start (tuple): The starting node (state `tuple`) of the random walk, or `None` to randomly pick a starting node (state `tuple`)
+            num_steps (tuple): TODO
 
     def generate_path(self, start=None, max_len=float('inf')):
         '''
