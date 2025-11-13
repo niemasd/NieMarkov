@@ -284,7 +284,9 @@ class MarkovChain:
 
         Args:
             start (tuple): The starting node (state `tuple`) of the random walk, or `None` to randomly pick a starting node (state `tuple`)
-            num_steps (tuple): TODO
+            num_steps (tuple): The number of steps in the random walk (larger = better estimate, but slower)
+        '''
+        raise NotImplementedError("TODO est_stationary_dist") # TODO
 
     def generate_path(self, start=None, max_len=float('inf')):
         '''
