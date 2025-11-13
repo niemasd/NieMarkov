@@ -278,15 +278,28 @@ class MarkovChain:
             curr_node = random_choice(self.transitions[curr_node])
             yield curr_node
 
-    def est_stationary_dist(self, start=None, num_steps=1000):
+    def est_stationary_dist(self, start=None, normalize=True, num_steps=1000):
         '''
         Estimate the stationary distribution of this `MarkovChain` via random walk
 
         Args:
             start (tuple): The starting node (state `tuple`) of the random walk, or `None` to randomly pick a starting node (state `tuple`)
+            normalize (bool): `True` to normalize values to proportions by dividing by the count total, otherwise `False` to return raw counts
             num_steps (tuple): The number of steps in the random walk (larger = better estimate, but slower)
+
+        Returns:
+            dict: A dictionary where keys are nodes (state `tuple`s) and values are stationary distribution proportions (if `normalize` is `True`) or counts (if `normalize` is `False`)
         '''
-        raise NotImplementedError("TODO est_stationary_dist") # TODO
+        counts = dict()
+        for curr_node in self.random_walk(start=start, num_steps=num_steps):
+            if curr_node not in counts:
+                counts[curr_node] = 0
+            counts[curr_node] += 1
+        if normalize:
+            total = sum(counts.values())
+            for curr_node in set(counts.keys()):
+                counts[curr_node] /= total
+        return counts
 
     def generate_path(self, start=None, max_len=float('inf')):
         '''
