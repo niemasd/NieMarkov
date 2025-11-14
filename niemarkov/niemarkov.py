@@ -11,7 +11,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-NIEMARKOV_VERSION = '1.0.6'
+NIEMARKOV_VERSION = '1.0.7'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
@@ -104,12 +104,7 @@ class MarkovChain:
         Yields:
             tuple: The next node (state `tuple`)
         '''
-        nodes = set()
-        for node_src, outgoing_dict in self.transitions.items():
-            nodes.add(node_src)
-            for node_dst in outgoing_dict:
-                nodes.add(node_dst)
-        for node in nodes:
+        for node in self.get_nodes():
             yield node
 
     def __getitem__(self, key):
@@ -126,6 +121,20 @@ class MarkovChain:
             return self.transitions[key]
         except KeyError:
             return dict()
+
+    def get_nodes(self):
+        '''
+        Get all of the nodes (state `tuple`s) of this `MarkovChain`
+
+        Returns:
+            set: The nodes (state `tuple`s) of this `MarkovChain`
+        '''
+        nodes = set()
+        for node_src, outgoing_dict in self.transitions.items():
+            nodes.add(node_src)
+            for node_dst in outgoing_dict:
+                nodes.add(node_dst)
+        return nodes
 
     def get_label(self, node, delim=' '):
         '''
