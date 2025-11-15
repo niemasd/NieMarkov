@@ -11,7 +11,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-NIEMARKOV_VERSION = '1.0.7'
+NIEMARKOV_VERSION = '1.0.8'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
@@ -281,11 +281,12 @@ class MarkovChain:
             if curr_node not in self.transitions:
                 break
             if num_steps is not None:
-                num_steps -= 1
                 if num_steps <= 0:
                     break
             curr_node = random_choice(self.transitions[curr_node])
             yield curr_node
+            if num_steps is not None:
+                num_steps -= 1
 
     def est_stationary_dist(self, start=None, normalize=True, num_steps=1000):
         '''
