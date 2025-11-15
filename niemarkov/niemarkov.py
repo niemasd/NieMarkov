@@ -141,8 +141,8 @@ class MarkovChain:
         Return the label of an `order`-order node (state `tuple`) of this `MarkovChain`
 
         Args:
-            node (tuple): The node (state `tuple`) whose label to get
-            delim (str): The delimiter to use to separate individual entities of `node`
+            node (tuple): The node (state `tuple`) or individual state whose label to get
+            delim (str): The delimiter to use to separate individual entities of `node` (if state `tuple`)
 
         Returns:
             str: The label of `node`
@@ -260,7 +260,7 @@ class MarkovChain:
         Iterator that yields nodes (state `tuples`) in this `MarkovChain` according to a random walk
 
         Args:
-            start (tuple): The starting node (state `tuple`), or `None` to randomly pick a starting node (state `tuple`)
+            start (tuple): The starting node (label `tuple`), or `None` to randomly pick a starting node (state `tuple`)
             include_start (bool): `True` to include `start` as the first yielded node, otherwise `False`
             num_steps (int): The number of steps in the random walk, or `None` to walk infinitely
 
