@@ -11,7 +11,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-NIEMARKOV_VERSION = '1.0.9'
+NIEMARKOV_VERSION = '1.0.10'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
@@ -244,7 +244,26 @@ class MarkovChain:
                 self.transitions[node_src] = dict()
             if node_dst not in self.transitions[node_src]:
                 self.transitions[node_src][node_dst] = 0
-            self.transitions[node_src][node_dst] = min(max_count, max(0, self.transitions[node_src][node_dst] + increment_amount))
+            self.transitions[node_src][node_dst] = min(max_count, max(min_count, self.transitions[node_src][node_dst] + increment_amount))
+
+    def add_pseudocount(self, include_self=False, amount=1, min_count=0, max_count=float('inf')):
+        '''
+        Add a pseudocount to all possible transitions in this `MarkovChain`
+
+        Args:
+            include_self (bool): `True` to include self-transitions, otherwise `False`
+            amount (int): The amount of the pseudocount
+            min_count (int): The minimum possible edge weight (useful for decrementing paths when `amount` is negative)
+            max_count (int): The maximum possible edge weight
+        '''
+        for u in self.get_nodes():
+            if u not in self.transitions:
+                self.transitions[u] = dict()
+            for v in self.get_nodes():
+                if include_self or (u != v):
+                    if v not in self.transitions[u]:
+                        self.transitions[u][v] = 0
+                    self.transitions[u][v] = min(max_count, max(min_count, self.transitions[u][v] + amount))
 
     def get_random_start(self):
         '''
