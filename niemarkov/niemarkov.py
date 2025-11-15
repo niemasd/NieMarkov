@@ -11,7 +11,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-NIEMARKOV_VERSION = '1.0.10'
+NIEMARKOV_VERSION = '1.0.11'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
@@ -274,12 +274,13 @@ class MarkovChain:
         '''
         return random_choice(self.initial_node)
 
-    def random_walk(self, start=None, include_start=False, num_steps=None):
+    def random_walk(self, start=None, start_is_node=False, include_start=False, num_steps=None):
         '''
         Iterator that yields label `tuple`s in this `MarkovChain` according to a random walk
 
         Args:
-            start (tuple): The starting label `tuple`, or `None` to randomly pick a starting node (state `tuple`)
+            start (tuple): The starting point of the random walk
+            start_is_node (bool): `True` if `start` is a node (state `tuple`), or `False` if `start` is a `tuple` or `list` of state labels
             include_start (bool): `True` to include `start` as the first yielded node, otherwise `False`
             num_steps (int): The number of steps in the random walk, or `None` to walk infinitely
 
@@ -289,7 +290,10 @@ class MarkovChain:
         if start is None:
             curr_node = self.get_random_start()
         elif len(start) == self.order:
-            curr_node = tuple(self.label_to_state[label] for label in start)
+            if start_is_node:
+                curr_node = start
+            else:
+                curr_node = tuple(self.label_to_state[label] for label in start)
             if curr_node not in self.transitions:
                 raise ValueError("No outgoing edges from start: %s" % start)
         else: # in the future, can do something fancy to handle this scenario, e.g. randomly pick an initial node (state `tuple`) ending with `start`
