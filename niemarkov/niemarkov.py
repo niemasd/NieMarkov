@@ -257,10 +257,10 @@ class MarkovChain:
 
     def random_walk(self, start=None, include_start=False, num_steps=None):
         '''
-        Iterator that yields nodes (state `tuples`) in this `MarkovChain` according to a random walk
+        Iterator that yields label `tuple`s in this `MarkovChain` according to a random walk
 
         Args:
-            start (tuple): The starting node (label `tuple`), or `None` to randomly pick a starting node (state `tuple`)
+            start (tuple): The starting label `tuple`, or `None` to randomly pick a starting node (state `tuple`)
             include_start (bool): `True` to include `start` as the first yielded node, otherwise `False`
             num_steps (int): The number of steps in the random walk, or `None` to walk infinitely
 
@@ -293,7 +293,7 @@ class MarkovChain:
         Estimate the stationary distribution of this `MarkovChain` via random walk
 
         Args:
-            start (tuple): The starting node (state `tuple`) of the random walk, or `None` to randomly pick a starting node (state `tuple`)
+            start (tuple): The starting label `tuple` of the random walk, or `None` to randomly pick a starting node (state `tuple`)
             normalize (bool): `True` to normalize values to proportions by dividing by the count total, otherwise `False` to return raw counts
             num_steps (tuple): The number of steps in the random walk (larger = better estimate, but slower)
 
@@ -316,7 +316,7 @@ class MarkovChain:
         Generate a random path in this `MarkovChain`
 
         Args:
-            start (tuple): The starting node (state `tuple`), or `None` to randomly pick a starting node (state `tuple`)
+            start (tuple): The starting label `tuple`, or `None` to randomly pick a starting node (state `tuple`)
             max_len (int): The maximum length of the random path to generate
 
         Returns:
