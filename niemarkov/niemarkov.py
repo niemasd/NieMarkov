@@ -11,7 +11,7 @@ from pickle import dump as pdump, load as pload
 from random import randint
 
 # useful constants
-NIEMARKOV_VERSION = '1.0.8'
+NIEMARKOV_VERSION = '1.0.9'
 ALLOWED_STATE_TYPES = {int, str}
 DEFAULT_BUFSIZE = 1048576 # 1 MB #8192 # 8 KB
 MODEL_EXT = {'dict', 'pkl'}
